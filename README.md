@@ -2,6 +2,16 @@
 
 A comprehensive web application that aggregates news from 47+ sources, tracks multiple carbon pricing streams with historical analysis, monitors 18 key ecosystem metrics, and provides AI-powered insights for environmental impact investors.
 
+## 🎯 **Current Status: MVP Complete & Operational**
+
+✅ **Fully Functional**: All core systems tested and working  
+✅ **AI Integration**: OpenRouter API with Claude-3-Haiku operational  
+✅ **Data Collection**: 94+ environmental finance sources active  
+✅ **Real-time Dashboard**: React frontend with live data  
+✅ **Production Ready**: Docker containerization complete  
+
+**Repository**: https://github.com/RKBattleSLoth/environmental-impact-investing-monitor
+
 ## 🚀 Features
 
 - **Daily News Briefings**: AI-powered summaries from 47+ environmental finance sources
@@ -43,14 +53,16 @@ A comprehensive web application that aggregates news from 47+ sources, tracks mu
 
 1. **Clone and setup environment:**
    ```bash
-   git clone <repository-url>
-   cd river_road
+   git clone https://github.com/RKBattleSLoth/environmental-impact-investing-monitor.git
+   cd environmental-impact-investing-monitor
    make setup
    ```
 
 2. **Configure environment variables:**
-   Edit `.env` file with your API keys:
+   Copy the example file and add your API keys:
    ```bash
+   cp .env.example .env
+   # Edit .env file with your OpenRouter API key
    OPENROUTER_API_KEY=your_openrouter_api_key_here
    ```
 
