@@ -80,7 +80,7 @@ class OpenRouterService {
       const cacheKey = `summary:${Buffer.from(title + content).toString('base64').slice(0, 32)}`;
       const redis = getRedis();
       const cached = await redis.get(cacheKey);
-      
+
       if (cached) {
         logger.info('Using cached summary');
         return cached;
@@ -120,7 +120,7 @@ Content: ${content.slice(0, 2000)}...`; // Limit content length
       const cacheKey = `brief:${new Date().toISOString().split('T')[0]}`;
       const redis = getRedis();
       const cached = await redis.get(cacheKey);
-      
+
       if (cached) {
         logger.info('Using cached daily brief');
         return JSON.parse(cached);
@@ -154,9 +154,9 @@ Focus on:
 - Regional focus: 60% US/North America, 40% global
 
 Articles by category:
-${Object.entries(categorizedArticles).map(([category, items]) => 
-  `\n${category.toUpperCase()}:\n${items.map(item => `- ${item.title} (${item.source}): ${item.summary}`).join('\n')}`
-).join('\n')}
+${Object.entries(categorizedArticles).map(([category, items]) =>
+    `\n${category.toUpperCase()}:\n${items.map(item => `- ${item.title} (${item.source}): ${item.summary}`).join('\n')}`
+  ).join('\n')}
 
 Keep the brief professional, concise, and actionable for investors.`;
 
@@ -191,7 +191,7 @@ Keep the brief professional, concise, and actionable for investors.`;
   async analyzeTrends(data, dataType = 'carbon_prices', options = {}) {
     try {
       const prompt = this.getTrendAnalysisPrompt(data, dataType);
-      
+
       const messages = [
         { role: 'user', content: prompt }
       ];
@@ -268,7 +268,7 @@ Include:
 - Policy impact evaluation
 - Investment recommendations`;
     }
-    
+
     return `Analyze this ${dataType} data for trends and investment implications: ${JSON.stringify(data.slice(0, 10))}`;
   }
 

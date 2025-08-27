@@ -23,7 +23,7 @@ class MetricsCollector {
         collector: 'collectDealCount'
       },
       {
-        name: 'Average Deal Size by Stage', 
+        name: 'Average Deal Size by Stage',
         source: 'pitchbook',
         frequency: 'quarterly',
         unit: 'USD',
@@ -33,7 +33,7 @@ class MetricsCollector {
       {
         name: 'New Climate Fund Formation',
         source: 'preqin',
-        frequency: 'quarterly', 
+        frequency: 'quarterly',
         unit: 'count',
         geography: 'Global',
         collector: 'collectFundFormation'
@@ -206,13 +206,13 @@ class MetricsCollector {
       'Series B': 55000000,
       'Series C+': 125000000
     };
-    
+
     const stageResults = {};
     for (const [stage, baseSize] of Object.entries(stages)) {
       const variation = (Math.random() - 0.5) * 0.3;
       stageResults[stage] = Math.round(baseSize * (1 + variation));
     }
-    
+
     return stageResults;
   }
 
@@ -229,18 +229,18 @@ class MetricsCollector {
         timeout: 10000,
         headers: { 'User-Agent': 'EIIM/1.0' }
       });
-      
+
       const $ = cheerio.load(response.data);
       const volumeText = $('.green-bond-volume').text();
       const match = volumeText.match(/(\d+\.?\d*)\s*[bB]illion/);
-      
+
       if (match) {
         return parseFloat(match[1]) * 1000000000;
       }
     } catch (error) {
       logger.warn('Failed to scrape green bond data:', error.message);
     }
-    
+
     // Fallback to realistic mock
     const baseValue = 156000000000; // $156B
     const variation = (Math.random() - 0.5) * 0.15;
@@ -260,7 +260,7 @@ class MetricsCollector {
       const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`, {
         timeout: 5000
       });
-      
+
       if (response.data?.chart?.result?.[0]) {
         const result = response.data.chart.result[0];
         const latestPrice = result.meta.regularMarketPrice;
@@ -269,7 +269,7 @@ class MetricsCollector {
     } catch (error) {
       logger.warn('Failed to get stock index data:', error.message);
     }
-    
+
     // Fallback
     const baseValue = 1245;
     const variation = (Math.random() - 0.5) * 0.1;
@@ -344,37 +344,37 @@ class MetricsCollector {
 
   async storeMetric(metric, value) {
     const db = getDB();
-    
+
     try {
       const now = new Date();
       const periodStart = new Date(now);
       const periodEnd = new Date(now);
-      
+
       // Adjust period based on frequency
       switch (metric.frequency) {
-        case 'daily':
-          periodStart.setHours(0, 0, 0, 0);
-          periodEnd.setHours(23, 59, 59, 999);
-          break;
-        case 'monthly':
-          periodStart.setDate(1);
-          periodStart.setHours(0, 0, 0, 0);
-          periodEnd.setMonth(periodEnd.getMonth() + 1, 0);
-          periodEnd.setHours(23, 59, 59, 999);
-          break;
-        case 'quarterly':
-          const quarterStart = Math.floor(now.getMonth() / 3) * 3;
-          periodStart.setMonth(quarterStart, 1);
-          periodStart.setHours(0, 0, 0, 0);
-          periodEnd.setMonth(quarterStart + 3, 0);
-          periodEnd.setHours(23, 59, 59, 999);
-          break;
-        case 'annual':
-          periodStart.setMonth(0, 1);
-          periodStart.setHours(0, 0, 0, 0);
-          periodEnd.setMonth(11, 31);
-          periodEnd.setHours(23, 59, 59, 999);
-          break;
+      case 'daily':
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd.setHours(23, 59, 59, 999);
+        break;
+      case 'monthly':
+        periodStart.setDate(1);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd.setMonth(periodEnd.getMonth() + 1, 0);
+        periodEnd.setHours(23, 59, 59, 999);
+        break;
+      case 'quarterly':
+        const quarterStart = Math.floor(now.getMonth() / 3) * 3;
+        periodStart.setMonth(quarterStart, 1);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd.setMonth(quarterStart + 3, 0);
+        periodEnd.setHours(23, 59, 59, 999);
+        break;
+      case 'annual':
+        periodStart.setMonth(0, 1);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd.setMonth(11, 31);
+        periodEnd.setHours(23, 59, 59, 999);
+        break;
       }
 
       // Check if metric already exists for this period
@@ -416,7 +416,7 @@ class MetricsCollector {
   async getFallbackValue(metric) {
     const redis = getRedis();
     const cacheKey = `metric_fallback:${metric.name}`;
-    
+
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
@@ -425,7 +425,7 @@ class MetricsCollector {
     } catch (error) {
       logger.warn('Redis cache error:', error.message);
     }
-    
+
     // Return null if no fallback available
     return null;
   }

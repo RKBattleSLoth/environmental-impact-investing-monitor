@@ -4,10 +4,10 @@ const logger = require('../utils/logger');
 const requestLogger = (req, res, next) => {
   const start = Date.now();
   const originalSend = res.send;
-  
+
   res.send = function(body) {
     const duration = Date.now() - start;
-    
+
     // Log request details
     logger.info('HTTP Request', {
       method: req.method,
@@ -18,7 +18,7 @@ const requestLogger = (req, res, next) => {
       ip: req.ip,
       contentLength: res.get('Content-Length') || body?.length || 0
     });
-    
+
     // Log slow requests
     if (duration > 1000) {
       logger.warn('Slow Request', {
@@ -28,10 +28,10 @@ const requestLogger = (req, res, next) => {
         status: res.statusCode
       });
     }
-    
+
     return originalSend.call(this, body);
   };
-  
+
   next();
 };
 
@@ -66,14 +66,14 @@ const errorTracker = (err, req, res, next) => {
     },
     user: req.user?.id || 'anonymous'
   });
-  
+
   // Track error metrics
   if (global.errorMetrics) {
     global.errorMetrics.total++;
     global.errorMetrics.by_type[err.name] = (global.errorMetrics.by_type[err.name] || 0) + 1;
     global.errorMetrics.last_error = new Date().toISOString();
   }
-  
+
   next(err);
 };
 
@@ -100,31 +100,31 @@ let apiMetrics = {
 
 const metricsCollector = (req, res, next) => {
   const start = Date.now();
-  
+
   // Increment request counters
   apiMetrics.requests.total++;
   apiMetrics.requests.by_method[req.method] = (apiMetrics.requests.by_method[req.method] || 0) + 1;
-  
+
   const originalSend = res.send;
   res.send = function(body) {
     const duration = Date.now() - start;
-    
+
     // Update response time metrics
     apiMetrics.response_times.total += duration;
     apiMetrics.response_times.avg = apiMetrics.response_times.total / apiMetrics.requests.total;
     apiMetrics.response_times.min = Math.min(apiMetrics.response_times.min, duration);
     apiMetrics.response_times.max = Math.max(apiMetrics.response_times.max, duration);
-    
+
     // Track status codes
     apiMetrics.requests.by_status[res.statusCode] = (apiMetrics.requests.by_status[res.statusCode] || 0) + 1;
-    
+
     // Track endpoints
     const endpoint = req.route?.path || req.originalUrl;
     apiMetrics.requests.by_endpoint[endpoint] = (apiMetrics.requests.by_endpoint[endpoint] || 0) + 1;
-    
+
     return originalSend.call(this, body);
   };
-  
+
   next();
 };
 
@@ -167,7 +167,7 @@ const resetMetrics = (req, res) => {
       last_error: null
     }
   };
-  
+
   res.json({
     success: true,
     message: 'Metrics reset successfully'

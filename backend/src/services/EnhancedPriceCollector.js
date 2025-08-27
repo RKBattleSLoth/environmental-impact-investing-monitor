@@ -86,12 +86,12 @@ class EnhancedPriceCollector {
     while (attempt < this.retryAttempts) {
       try {
         switch (source.type) {
-          case 'api':
-            return await this.collectFromAPI(source);
-          case 'scrape':
-            return await this.collectFromScraping(source);
-          default:
-            throw new Error(`Unknown source type: ${source.type}`);
+        case 'api':
+          return await this.collectFromAPI(source);
+        case 'scrape':
+          return await this.collectFromScraping(source);
+        default:
+          throw new Error(`Unknown source type: ${source.type}`);
         }
       } catch (error) {
         attempt++;
@@ -121,12 +121,12 @@ class EnhancedPriceCollector {
       });
 
       const $ = cheerio.load(response.data);
-      
+
       // This is a simplified scraping approach
       // In production, each source would need specific parsing logic
       const priceText = $(source.selector || 'body').text();
       const priceMatch = priceText.match(/(\d+\.?\d*)\s*EUR|USD|GBP/i);
-      
+
       if (priceMatch) {
         const price = parseFloat(priceMatch[1]);
         return {
@@ -163,7 +163,7 @@ class EnhancedPriceCollector {
       // Get yesterday's price for trend continuity
       const cacheKey = `last_price:${marketInfo.market}`;
       let lastPrice = await redis.get(cacheKey);
-      
+
       if (!lastPrice) {
         lastPrice = marketInfo.basePrice;
       } else {
@@ -174,10 +174,10 @@ class EnhancedPriceCollector {
       const randomWalk = (Math.random() - 0.5) * 2 * marketInfo.volatility;
       const trendFactor = this.getMarketTrend(marketInfo.market);
       const newPrice = lastPrice * (1 + randomWalk + trendFactor);
-      
+
       // Ensure price doesn't go negative or too extreme
-      const clampedPrice = Math.max(marketInfo.basePrice * 0.5, 
-                                   Math.min(marketInfo.basePrice * 2, newPrice));
+      const clampedPrice = Math.max(marketInfo.basePrice * 0.5,
+        Math.min(marketInfo.basePrice * 2, newPrice));
 
       const price = {
         market: marketInfo.market,
@@ -205,7 +205,7 @@ class EnhancedPriceCollector {
       'rggi': 0.0015,     // Growing market
       'uk_ets': 0.0008    // New market, moderate growth
     };
-    
+
     return trends[market] || 0;
   }
 
@@ -244,7 +244,7 @@ class EnhancedPriceCollector {
 
   async getHistoricalAnalysis(market, days = 30) {
     const db = getDB();
-    
+
     try {
       const result = await db.query(`
         SELECT market, price, volume, currency, timestamp
@@ -263,7 +263,7 @@ class EnhancedPriceCollector {
       const avg = priceValues.reduce((a, b) => a + b, 0) / priceValues.length;
       const min = Math.min(...priceValues);
       const max = Math.max(...priceValues);
-      
+
       // Calculate volatility (standard deviation)
       const variance = priceValues.reduce((sum, price) => sum + Math.pow(price - avg, 2), 0) / priceValues.length;
       const volatility = Math.sqrt(variance);
@@ -274,7 +274,7 @@ class EnhancedPriceCollector {
       const sumY = priceValues.reduce((sum, price) => sum + price, 0);
       const sumXY = prices.reduce((sum, price, i) => sum + (i * price.price), 0);
       const sumXX = prices.reduce((sum, _, i) => sum + (i * i), 0);
-      
+
       const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
       const trend = slope > 0.01 ? 'increasing' : slope < -0.01 ? 'decreasing' : 'stable';
 

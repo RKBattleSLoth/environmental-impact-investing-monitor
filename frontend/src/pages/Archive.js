@@ -5,6 +5,7 @@ const Archive = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [dateRange, setDateRange] = useState('30');
 
+  // eslint-disable-next-line no-unused-vars
   const categories = [
     'all',
     'venture-capital',

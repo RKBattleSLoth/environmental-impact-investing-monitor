@@ -42,7 +42,7 @@ class PriceCollector {
     ];
 
     const prices = [];
-    
+
     for (const market of markets) {
       // Add small random variation to simulate real price movements
       const variation = (Math.random() - 0.5) * 0.1; // ±5%

@@ -19,7 +19,7 @@ const connectDB = async () => {
     const client = await pool.connect();
     const result = await client.query('SELECT NOW()');
     client.release();
-    
+
     logger.info('PostgreSQL connected successfully');
     logger.info(`Database time: ${result.rows[0].now}`);
 

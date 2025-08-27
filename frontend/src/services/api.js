@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -13,11 +13,15 @@ const api = axios.create({
 // Request interceptor for logging
 api.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    }
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API Request Error:', error);
+    }
     return Promise.reject(error);
   }
 );
@@ -28,12 +32,16 @@ api.interceptors.response.use(
     return response.data;
   },
   (error) => {
-    console.error('API Response Error:', error.response?.data || error.message);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API Response Error:', error.response?.data || error.message);
+    }
     
     // Handle common error cases
     if (error.response?.status === 401) {
       // Handle unauthorized access
-      console.warn('Unauthorized access detected');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Unauthorized access detected');
+      }
     }
     
     return Promise.reject(error.response?.data || error);
@@ -65,7 +73,7 @@ export const searchAPI = {
 export const exportAPI = {
   exportData: (params) => {
     // For file downloads, we need to handle the response differently
-    return axios.get(`${API_BASE_URL}/generate/export`, {
+    return axios.get(`/api/v1/generate/export`, {
       params,
       responseType: 'blob',
       timeout: 60000

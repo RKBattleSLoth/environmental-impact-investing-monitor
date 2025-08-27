@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBriefs, useCarbonPrices, useMetrics } from '../hooks/useAPI';
-import { Line } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 import { format } from 'date-fns';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { data: briefs, isLoading: briefsLoading, error: briefsError } = useBriefs({ limit: 1 });
   const { data: prices, isLoading: pricesLoading } = useCarbonPrices();
   const { data: metrics, isLoading: metricsLoading } = useMetrics();
@@ -18,14 +20,23 @@ const Dashboard = () => {
     const colors = ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b'];
     
     return {
-      labels: ['Current'], // Simplified for current prices
-      datasets: markets.map((market, index) => ({
-        label: market.toUpperCase().replace('_', ' '),
-        data: [prices.data[market].current],
-        borderColor: colors[index % colors.length],
-        backgroundColor: colors[index % colors.length] + '20',
-        tension: 0.1,
-      }))
+      labels: markets.map(market => {
+        const marketName = market.toUpperCase().replace('_', ' ');
+        const marketMap = {
+          'EU ETS': 'EU ETS',
+          'CALIFORNIA': 'California',
+          'UK ETS': 'UK ETS',
+          'RGGI': 'RGGI'
+        };
+        return marketMap[marketName] || marketName;
+      }),
+      datasets: [{
+        label: 'Current Price',
+        data: markets.map(market => prices.data[market].current),
+        backgroundColor: colors,
+        borderColor: colors,
+        borderWidth: 2,
+      }]
     };
   }, [prices]);
 
@@ -78,7 +89,10 @@ const Dashboard = () => {
                     }}
                   />
                   <div className="mt-4">
-                    <button className="text-primary-600 hover:text-primary-700 font-medium">
+                    <button 
+                      onClick={() => navigate('/briefs')}
+                      className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+                    >
                       Read Full Brief →
                     </button>
                   </div>
@@ -100,32 +114,58 @@ const Dashboard = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                 </div>
               ) : chartData ? (
-                <div className="h-64">
-                  <Line 
-                    data={chartData} 
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: 'top',
-                        },
-                        title: {
-                          display: true,
-                          text: 'Current Carbon Prices by Market'
-                        }
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: false,
+                <div>
+                  <div className="h-64">
+                    <Bar 
+                      data={chartData} 
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: false,
+                          },
                           title: {
                             display: true,
-                            text: 'Price (Local Currency)'
+                            text: 'Current Carbon Prices by Market'
+                          }
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            title: {
+                              display: true,
+                              text: 'Price (Local Currency)'
+                            }
+                          },
+                          x: {
+                            title: {
+                              display: true,
+                              text: 'Carbon Markets'
+                            }
                           }
                         }
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    {Object.entries(prices.data || {}).map(([market, data]) => (
+                      <div key={market} className="bg-gray-50 rounded-lg p-3">
+                        <div className="font-medium text-gray-900">
+                          {market.toUpperCase().replace('_', ' ')}
+                        </div>
+                        <div className="text-2xl font-bold text-gray-700">
+                          {data.current.toFixed(2)} {data.currency}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Volume: {parseInt(data.volume).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Updated: {new Date(data.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="h-64 flex items-center justify-center text-gray-500">

@@ -75,17 +75,17 @@ process.on('SIGINT', gracefulShutdown);
 
 function gracefulShutdown(signal) {
   logger.info(`Received ${signal}. Starting graceful shutdown...`);
-  
+
   // Close server
   server.close(() => {
     logger.info('HTTP server closed.');
-    
+
     // Close database connections
     // Add database cleanup here
-    
+
     process.exit(0);
   });
-  
+
   // Force close after 30 seconds
   setTimeout(() => {
     logger.error('Could not close connections in time, forcefully shutting down');
@@ -100,13 +100,13 @@ async function startServer() {
     // Connect to database
     await connectDB();
     logger.info('Database connected successfully');
-    
+
     // Start server
     server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 EIIM Backend server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV}`);
     });
-    
+
     return server;
   } catch (error) {
     logger.error('Failed to start server:', error);

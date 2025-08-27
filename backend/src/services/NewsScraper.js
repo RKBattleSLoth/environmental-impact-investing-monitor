@@ -35,7 +35,7 @@ class NewsScraper {
         try {
           const articles = await this.scrapeRSSSource(source);
           totalArticles += articles.length;
-          
+
           // Update last scraped time
           await db.query(`
             UPDATE data_sources 
@@ -46,7 +46,7 @@ class NewsScraper {
           logger.info(`Scraped ${articles.length} articles from ${source.name}`);
         } catch (error) {
           logger.error(`Failed to scrape ${source.name}:`, error);
-          
+
           // Increment error count
           await db.query(`
             UPDATE data_sources 
@@ -104,10 +104,10 @@ class NewsScraper {
       const title = this.cleanText(item.title);
       const content = this.cleanText(item.content || item.summary || '');
       const publishedDate = new Date(item.pubDate || item.isoDate);
-      
+
       // Categorize article based on title and content
       const category = this.categorizeArticle(title, content);
-      
+
       // Calculate priority score
       const priorityScore = this.calculatePriorityScore(title, content, source.name);
 
@@ -146,7 +146,7 @@ class NewsScraper {
 
   cleanText(text) {
     if (!text) return '';
-    
+
     // Remove HTML tags
     const $ = cheerio.load(text);
     return $.text().trim();
@@ -154,7 +154,7 @@ class NewsScraper {
 
   categorizeArticle(title, content) {
     const text = (title + ' ' + content).toLowerCase();
-    
+
     if (text.includes('venture') || text.includes('startup') || text.includes('funding')) {
       return 'venture-capital';
     }
@@ -173,38 +173,38 @@ class NewsScraper {
     if (text.includes('biodiversity') || text.includes('nature') || text.includes('ecosystem')) {
       return 'biodiversity';
     }
-    
+
     return 'esg-sustainability';
   }
 
   calculatePriorityScore(title, content, source) {
     let score = 50; // Base score
-    
+
     // Source reputation multiplier
     const highValueSources = ['Environmental Finance', 'Carbon Pulse', 'Bloomberg Green'];
     if (highValueSources.includes(source)) {
       score += 20;
     }
-    
+
     // Keywords that increase priority
     const highPriorityKeywords = [
       'breakthrough', 'record', 'first', 'largest', 'major', 'significant',
       'investment', 'funding', 'merger', 'acquisition', 'ipo', 'regulation'
     ];
-    
+
     const text = (title + ' ' + content).toLowerCase();
     highPriorityKeywords.forEach(keyword => {
       if (text.includes(keyword)) {
         score += 10;
       }
     });
-    
+
     return Math.min(100, Math.max(0, score)); // Clamp between 0-100
   }
 
   generateFallbackSummary(content) {
     if (!content) return '';
-    
+
     // Simple extractive summary - get first few sentences
     const sentences = content.split('.').filter(s => s.trim().length > 30);
     const summary = sentences.slice(0, 3).join('. ');
@@ -290,14 +290,14 @@ class NewsScraper {
     });
 
     const topCategories = Object.keys(categories).slice(0, 5);
-    
-    let content = `# Daily Environmental Impact Investing Brief\n\n`;
-    content += `## Executive Summary\n\n`;
+
+    let content = '# Daily Environmental Impact Investing Brief\n\n';
+    content += '## Executive Summary\n\n';
     content += `Today's brief covers ${articles.length} key developments across ${topCategories.length} categories in environmental impact investing. `;
     content += `Key focus areas include ${topCategories.join(', ')}.\n\n`;
 
-    content += `## Key Developments by Category\n\n`;
-    
+    content += '## Key Developments by Category\n\n';
+
     Object.entries(categories).forEach(([category, categoryArticles]) => {
       content += `### ${category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}\n\n`;
       categoryArticles.slice(0, 3).forEach(article => {
@@ -306,9 +306,9 @@ class NewsScraper {
       });
     });
 
-    content += `## Market Implications\n\n`;
-    content += `Based on today's developments, key market trends include continued growth in environmental investing, `;
-    content += `policy developments affecting carbon markets, and technological innovations in clean energy.\n\n`;
+    content += '## Market Implications\n\n';
+    content += 'Based on today\'s developments, key market trends include continued growth in environmental investing, ';
+    content += 'policy developments affecting carbon markets, and technological innovations in clean energy.\n\n';
 
     return {
       content,
