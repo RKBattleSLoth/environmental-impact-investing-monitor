@@ -65,5 +65,5 @@
     "nth-check": "^2.0.1",
     "postcss": "^8.4.31"
   },
-  "proxy": "http://localhost:3002"
+  "proxy": "http://localhost:4201"
 }

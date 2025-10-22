@@ -1,4 +1,6 @@
 const axios = require('axios');
+const http = require('http');
+const https = require('https');
 const { getRedis } = require('../database/connection');
 const logger = require('../utils/logger');
 
@@ -6,12 +8,18 @@ class OpenRouterService {
   constructor() {
     this.baseURL = 'https://openrouter.ai/api/v1';
     this.apiKey = process.env.OPENROUTER_API_KEY;
+    if (!this.apiKey) {
+      throw new Error('OpenRouter API key is not configured. Set OPENROUTER_API_KEY in the environment.');
+    }
+    const defaultSummarizationModel = process.env.AI_MODEL_DEFAULT || 'anthropic/claude-3-haiku';
+    const defaultAnalysisModel = process.env.AI_MODEL_ANALYSIS || 'anthropic/claude-3-haiku';
+
     this.models = {
-      summarization: 'anthropic/claude-3-haiku',
-      analysis: 'anthropic/claude-3-haiku', // Use haiku for analysis since sonnet is not available
-      research: 'anthropic/claude-3-haiku',
+      summarization: defaultSummarizationModel,
+      analysis: defaultAnalysisModel,
+      research: defaultAnalysisModel,
       coding: 'deepseek/deepseek-coder',
-      alternative: 'meta-llama/llama-3.1-8b-instruct'
+      alternative: process.env.AI_MODEL_ALTERNATIVE || 'meta-llama/llama-3.1-8b-instruct'
     };
     this.rateLimits = {
       requests: 0,
@@ -20,6 +28,24 @@ class OpenRouterService {
       tokensPerMinute: 100000,
       lastReset: Date.now()
     };
+
+    const agentOptions = {
+      keepAlive: true,
+      family: 4
+    };
+
+    this.client = axios.create({
+      baseURL: this.baseURL,
+      timeout: 45000,
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://eiim.app',
+        'X-Title': 'Environmental Impact Investing Monitor'
+      },
+      httpAgent: new http.Agent(agentOptions),
+      httpsAgent: new https.Agent(agentOptions)
+    });
   }
 
   async checkRateLimit() {
@@ -50,26 +76,14 @@ class OpenRouterService {
 
       logger.info(`Making OpenRouter request to ${model}`);
 
-      const response = await axios.post(
-        `${this.baseURL}/chat/completions`,
-        requestData,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://eiim.app',
-            'X-Title': 'Environmental Impact Investing Monitor'
-          },
-          timeout: 30000
-        }
-      );
+      const response = await this.client.post('/chat/completions', requestData);
 
       this.rateLimits.requests++;
       this.rateLimits.tokens += response.data.usage?.total_tokens || 0;
 
       return response.data.choices[0].message.content;
     } catch (error) {
-      logger.error('OpenRouter API error:', error.response?.data || error.message);
+      logger.error('OpenRouter API error:', error.response?.data || { message: error.message, code: error.code });
       throw error;
     }
   }
@@ -112,80 +126,105 @@ Content: ${content.slice(0, 2000)}...`; // Limit content length
   }
 
   async generateDailyBrief(articles, options = {}) {
-    try {
-      if (!articles || articles.length === 0) {
-        throw new Error('No articles provided for brief generation');
-      }
+    const { date, useCache = false, retryAttempts = 5 } = options;
 
-      const cacheKey = `brief:${new Date().toISOString().split('T')[0]}`;
-      const redis = getRedis();
+    if (!articles || articles.length === 0) {
+      throw new Error('No articles provided for brief generation');
+    }
+
+    const topCategories = this.extractTopCategories(articles);
+    const articleLinks = this.buildArticleLinks(articles);
+
+    let cacheKey;
+    let redis;
+    if (useCache) {
+      redis = getRedis();
+      cacheKey = `brief:${date || new Date().toISOString().split('T')[0]}`;
       const cached = await redis.get(cacheKey);
-
       if (cached) {
         logger.info('Using cached daily brief');
         return JSON.parse(cached);
       }
-
-      // Prepare article summaries for the brief
-      const articleSummaries = articles.map(article => ({
-        title: article.title,
-        category: article.category,
-        summary: article.summary || article.content?.slice(0, 200),
-        priority: article.priority_score || 50,
-        source: article.source
-      }));
-
-      // Group by category
-      const categorizedArticles = this.groupByCategory(articleSummaries);
-
-      const prompt = `Create a comprehensive daily morning brief for environmental impact investors from these ${articles.length} articles.
-
-Structure the brief with:
-1. Executive Summary (2-3 sentences highlighting the most important developments)
-2. Key Developments by Category
-3. Market Implications 
-4. Investment Outlook
-
-Focus on:
-- Investment opportunities and risks
-- Market movements and trends
-- Policy changes affecting investments
-- Technology breakthroughs with commercial potential
-- Regional focus: 60% US/North America, 40% global
-
-Articles by category:
-${Object.entries(categorizedArticles).map(([category, items]) =>
-    `\n${category.toUpperCase()}:\n${items.map(item => `- ${item.title} (${item.source}): ${item.summary}`).join('\n')}`
-  ).join('\n')}
-
-Keep the brief professional, concise, and actionable for investors.`;
-
-      const messages = [
-        { role: 'user', content: prompt }
-      ];
-
-      const brief = await this.makeRequest(
-        this.models.analysis,
-        messages,
-        { maxTokens: 1500, temperature: 0.4 }
-      );
-
-      const result = {
-        content: brief,
-        articleCount: articles.length,
-        topCategories: Object.keys(categorizedArticles).slice(0, 5),
-        generatedAt: new Date(),
-        aiModel: this.models.analysis
-      };
-
-      // Cache for 6 hours
-      await redis.setEx(cacheKey, 21600, JSON.stringify(result));
-
-      return result;
-    } catch (error) {
-      logger.error('Error generating daily brief:', error);
-      return this.fallbackBrief(articles);
     }
+
+    const categorizedArticles = this.groupByCategory(articles.map(article => ({
+      title: article.title,
+      category: article.category,
+      summary: article.summary || article.content?.slice(0, 300),
+      priority: article.priority_score || 50,
+      source: article.source
+    })));
+
+    const prompt = `You are preparing a structured briefing for environmental impact investors based on ${articles.length} articles. Return strict JSON matching:
+{
+  "headline": string,
+  "executiveSummary": string (3-4 sentences),
+  "keyDevelopments": [
+    {
+      "title": string,
+      "detail": string (2 sentences focused on investment impact),
+      "category": string
+    }
+  ],
+  "marketImplications": string (2 paragraphs),
+  "investmentOutlook": string (2 paragraphs),
+  "sentiment": "positive" | "neutral" | "negative"
+}
+
+Focus on the most material themes across these categories and articles:
+${Object.entries(categorizedArticles).map(([category, items]) => `\n${category.toUpperCase()}:\n${items.map(item => `- ${item.title} (${item.source}): ${item.summary || 'No summary provided'}`).join('\n')}`).join('\n')}`;
+
+    const messages = [{ role: 'user', content: prompt }];
+
+    let attempt = 0;
+    let lastError;
+    while (attempt < retryAttempts) {
+      try {
+        const response = await this.makeRequest(
+          this.models.analysis,
+          messages,
+          { maxTokens: 1800, temperature: 0.4 }
+        );
+
+        const structured = this.parseBriefResponse(response);
+        if (!structured) {
+          throw new Error('Unable to parse AI brief response');
+        }
+
+        const normalized = this.normalizeBriefStructure(structured, {
+          topCategories,
+          articleLinks
+        });
+
+        const result = {
+          summary: normalized,
+          articleCount: articles.length,
+          topCategories,
+          aiModel: this.models.analysis
+        };
+
+        if (useCache && redis && cacheKey) {
+          await redis.setEx(cacheKey, 21600, JSON.stringify(result));
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error;
+        attempt += 1;
+
+        if (!this.shouldRetry(error) || attempt >= retryAttempts) {
+          logger.error('Error generating daily brief:', error);
+          return this.fallbackBrief(articles, { topCategories, articleLinks });
+        }
+
+        const delay = Math.min(15000, 2000 * attempt ** 2);
+        logger.warn(`Retrying brief generation (attempt ${attempt}/${retryAttempts}) after ${delay}ms due to ${error.response?.status || error.code || error.message}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    logger.error('Failed to generate brief after retries:', lastError);
+    return this.fallbackBrief(articles, { topCategories, articleLinks });
   }
 
   async analyzeTrends(data, dataType = 'carbon_prices', options = {}) {
@@ -283,18 +322,114 @@ Include:
     }));
   }
 
+  shouldRetry(error) {
+    const status = error?.response?.status || error?.response?.data?.error?.code;
+    const code = error?.code;
+    return status === 429 || code === 'ETIMEDOUT' || code === 'ENETUNREACH';
+  }
+
+  parseBriefResponse(raw) {
+    if (!raw) return null;
+    const trimmed = raw.trim();
+
+    const attemptParse = (value) => {
+      try {
+        return JSON.parse(value);
+      } catch (err) {
+        return null;
+      }
+    };
+
+    if (trimmed.startsWith('{')) {
+      const parsed = attemptParse(trimmed);
+      if (parsed) {
+        return parsed;
+      }
+    }
+
+    const match = trimmed.match(/\{[\s\S]*\}/);
+    if (match) {
+      return attemptParse(match[0]);
+    }
+
+    return null;
+  }
+
+  normalizeBriefStructure(structured, { topCategories, articleLinks }) {
+    const developments = Array.isArray(structured?.keyDevelopments)
+      ? structured.keyDevelopments
+          .filter(item => item && (item.title || item.detail))
+          .map(item => ({
+            title: (item.title || '').toString().trim(),
+            detail: (item.detail || '').toString().trim(),
+            category: (item.category || 'general').toString().trim()
+          }))
+      : [];
+
+    return {
+      headline: (structured?.headline || 'Daily Environmental Impact Investing Brief').toString().trim(),
+      executiveSummary: (structured?.executiveSummary || '').toString().trim(),
+      keyDevelopments: developments.slice(0, 6),
+      marketImplications: (structured?.marketImplications || '').toString().trim(),
+      investmentOutlook: (structured?.investmentOutlook || '').toString().trim(),
+      sentiment: (structured?.sentiment || 'neutral').toString().trim().toLowerCase(),
+      topCategories,
+      articleLinks,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  extractTopCategories(articles, limit = 5) {
+    const counts = articles.reduce((acc, article) => {
+      const category = (article.category || 'general').toLowerCase();
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([category]) => category);
+  }
+
+  buildArticleLinks(articles) {
+    return articles.map((article, index) => ({
+      rank: index + 1,
+      title: article.title,
+      source: article.source,
+      url: article.url,
+      publishedAt: article.published_date
+    }));
+  }
+
   fallbackSummary(content) {
     // Simple extractive summary as fallback
     const sentences = content.split('.').filter(s => s.length > 50);
     return sentences.slice(0, 3).join('. ') + '.';
   }
 
-  fallbackBrief(articles) {
+  fallbackBrief(articles, { topCategories, articleLinks }) {
+    const categoriesSummary = topCategories.length > 0 ? topCategories.join(', ') : 'core climate finance themes';
+    const developments = articles.slice(0, 6).map(article => ({
+      title: article.title,
+      detail: (article.summary || article.content || '').slice(0, 280),
+      category: (article.category || 'general').toLowerCase()
+    }));
+
     return {
-      content: `Daily Brief (${new Date().toDateString()})\n\nCollected ${articles.length} articles from environmental finance sources. Key categories include ${[...new Set(articles.map(a => a.category))].join(', ')}. Detailed analysis unavailable - please check AI service configuration.`,
+      summary: {
+        headline: `Daily Environmental Impact Investing Brief — ${new Date().toDateString()}`,
+        executiveSummary: `We tracked ${articles.length} notable developments across ${topCategories.length || 'several'} categories in environmental finance, with emphasis on ${categoriesSummary}.`,
+        keyDevelopments: developments,
+        marketImplications: 'Detailed AI analysis unavailable. Key market themes include continued momentum in climate-aligned capital flows, evolving policy frameworks, and innovation in low-carbon technologies.',
+        investmentOutlook: 'Investors should monitor regulatory progress, financing pipelines, and company-level climate commitments. Diversified exposure across high-impact climate sectors remains prudent.',
+        sentiment: 'neutral',
+        topCategories,
+        articleLinks,
+        generatedAt: new Date().toISOString()
+      },
       articleCount: articles.length,
-      topCategories: [...new Set(articles.map(a => a.category))].slice(0, 5),
-      generatedAt: new Date(),
+      topCategories,
       aiModel: 'fallback'
     };
   }

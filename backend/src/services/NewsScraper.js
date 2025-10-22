@@ -250,7 +250,7 @@ class NewsScraper {
       let briefData;
       try {
         if (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY !== 'sk-or-v1-demo-key-for-development') {
-          briefData = await this.aiService.generateDailyBrief(articles);
+          briefData = await this.aiService.generateDailyBrief(articles, { date: targetDate, retryAttempts: 6 });
         } else {
           briefData = this.generateFallbackBrief(articles);
         }
@@ -259,6 +259,11 @@ class NewsScraper {
         briefData = this.generateFallbackBrief(articles);
       }
 
+      const summaryPayload = {
+        ...briefData.summary,
+        generatedAt: briefData.summary.generatedAt || new Date().toISOString()
+      };
+
       // Store in database
       const result = await db.query(`
         INSERT INTO daily_briefs (brief_date, content, article_count, top_categories, ai_model_used)
@@ -266,14 +271,26 @@ class NewsScraper {
         RETURNING id
       `, [
         targetDate,
-        briefData.content,
+        JSON.stringify(summaryPayload),
         briefData.articleCount,
         briefData.topCategories,
         briefData.aiModel || 'fallback'
       ]);
 
-      logger.info(`Daily brief generated successfully for ${targetDate}, ID: ${result.rows[0].id}`);
-      return result.rows[0];
+      const briefId = result.rows[0].id;
+
+      // Track article references
+      await db.query('DELETE FROM daily_brief_articles WHERE brief_id = $1', [briefId]);
+      for (const [index, article] of articles.entries()) {
+        await db.query(`
+          INSERT INTO daily_brief_articles (brief_id, article_id, source_rank)
+          VALUES ($1, $2, $3)
+          ON CONFLICT DO NOTHING
+        `, [briefId, article.id, index + 1]);
+      }
+
+      logger.info(`Daily brief generated successfully for ${targetDate}, ID: ${briefId}`);
+      return { id: briefId };
 
     } catch (error) {
       logger.error('Error generating daily brief:', error);
@@ -291,30 +308,36 @@ class NewsScraper {
 
     const topCategories = Object.keys(categories).slice(0, 5);
 
-    let content = '# Daily Environmental Impact Investing Brief\n\n';
-    content += '## Executive Summary\n\n';
-    content += `Today's brief covers ${articles.length} key developments across ${topCategories.length} categories in environmental impact investing. `;
-    content += `Key focus areas include ${topCategories.join(', ')}.\n\n`;
+    const articleLinks = articles.map((article, index) => ({
+      rank: index + 1,
+      title: article.title,
+      source: article.source,
+      url: article.url,
+      publishedAt: article.published_date
+    }));
 
-    content += '## Key Developments by Category\n\n';
-
-    Object.entries(categories).forEach(([category, categoryArticles]) => {
-      content += `### ${category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ')}\n\n`;
-      categoryArticles.slice(0, 3).forEach(article => {
-        content += `**${article.title}** (${article.source})\n`;
-        content += `${article.summary || article.content?.slice(0, 150) + '...'}\n\n`;
-      });
-    });
-
-    content += '## Market Implications\n\n';
-    content += 'Based on today\'s developments, key market trends include continued growth in environmental investing, ';
-    content += 'policy developments affecting carbon markets, and technological innovations in clean energy.\n\n';
+    const developments = Object.entries(categories).flatMap(([category, grouped]) =>
+      grouped.slice(0, 3).map(article => ({
+        title: article.title,
+        detail: (article.summary || article.content || '').slice(0, 280),
+        category
+      }))
+    ).slice(0, 6);
 
     return {
-      content,
+      summary: {
+        headline: `Daily Environmental Impact Investing Brief — ${new Date().toDateString()}`,
+        executiveSummary: `Today's brief covers ${articles.length} key developments across ${topCategories.length || 'multiple'} categories, highlighting themes such as ${topCategories.join(', ') || 'climate finance and policy momentum'}.`,
+        keyDevelopments: developments,
+        marketImplications: 'Detailed AI analysis unavailable. Market sentiment remains driven by climate policy, capital inflows to clean technologies, and evolving disclosure standards.',
+        investmentOutlook: 'Monitor pipeline strength in carbon markets, clean energy infrastructure, and ESG-aligned corporate actions. Maintain diversified exposure across high-impact climate solutions.',
+        sentiment: 'neutral',
+        topCategories,
+        articleLinks,
+        generatedAt: new Date().toISOString()
+      },
       articleCount: articles.length,
       topCategories,
-      generatedAt: new Date(),
       aiModel: 'fallback'
     };
   }

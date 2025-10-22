@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3002', 'http://127.0.0.1:3000', 'http://127.0.0.1:3002'],
+  origin: ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:4200', 'http://127.0.0.1:3000', 'http://127.0.0.1:3002', 'http://127.0.0.1:4200'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

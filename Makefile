@@ -34,8 +34,8 @@ up:
 	@echo "Starting EIIM development environment..."
 	docker-compose up -d
 	@echo "Services started!"
-	@echo "Frontend: http://localhost:3000"
-	@echo "Backend API: http://localhost:3001"
+	@echo "Frontend: http://localhost:4200"
+	@echo "Backend API: http://localhost:4201"
 	@echo "Database: localhost:5432"
 
 # Start with logs
@@ -123,3 +123,8 @@ status:
 	@echo "Service Status:"
 	@echo "==============="
 	@docker-compose ps
+
+# Database population
+populate-90-days:
+	@echo "Populating 90 days of daily summaries..."
+	docker-compose run --rm backend npm run populate-90-days

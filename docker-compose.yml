@@ -24,8 +24,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: eiim-redis
-    ports:
-      - "6379:6379"
+    # Comment out port to avoid conflicts
+    # ports:
+    #   - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -45,9 +46,9 @@ services:
       DATABASE_URL: postgresql://eiim_user:eiim_password@db:5432/eiim
       REDIS_URL: redis://redis:6379
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      PORT: 3001
+      PORT: 4201
     ports:
-      - "3001:3001"
+      - "4201:4201"
     depends_on:
       db:
         condition: service_healthy
@@ -58,7 +59,7 @@ services:
       - /app/node_modules
     command: npm run dev
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4201/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -91,10 +92,11 @@ services:
       dockerfile: Dockerfile
     container_name: eiim-frontend
     environment:
-      REACT_APP_API_URL: http://localhost:3001/api/v1
+      REACT_APP_API_URL: http://localhost:4201/api/v1
+      PORT: 4200
       REACT_APP_ENV: development
     ports:
-      - "3000:3000"
+      - "4200:4200"
     depends_on:
       - backend
     volumes:
