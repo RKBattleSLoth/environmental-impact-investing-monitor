@@ -81,11 +81,11 @@ const CarbonPrices = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Carbon Price Tracking</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Carbon Price Tracking</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             Real-time monitoring of major carbon markets with historical analysis
           </p>
         </div>
@@ -93,9 +93,9 @@ const CarbonPrices = () => {
         {/* Current Prices Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {carbonMarkets.map((market) => (
-            <div key={market.name} className="bg-white rounded-lg shadow p-6">
+            <div key={market.name} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">{market.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{market.name}</h3>
                 <span className={`px-2 py-1 text-xs font-medium rounded ${
                   market.change >= 0 
                     ? 'bg-green-100 text-green-800' 
@@ -106,14 +106,14 @@ const CarbonPrices = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Current Price</span>
-                  <span className="font-semibold">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Current Price</span>
+                  <span className="font-semibold dark:text-white">
                     {market.price} {market.currency}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Volume</span>
-                  <span className="text-sm">{market.volume}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Volume</span>
+                  <span className="text-sm dark:text-gray-300">{market.volume}</span>
                 </div>
               </div>
             </div>
@@ -121,25 +121,25 @@ const CarbonPrices = () => {
         </div>
 
         {/* Price Chart */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
           <Line data={chartData} options={chartOptions} />
         </div>
 
         {/* Market Analysis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Market Analysis</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Market Analysis</h3>
             <div className="space-y-4">
               <div className="border-l-4 border-green-400 pl-4">
-                <h4 className="font-medium text-gray-900">EU ETS</h4>
-                <p className="text-sm text-gray-600">
+                <h4 className="font-medium text-gray-900 dark:text-white">EU ETS</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Strong performance driven by increased industrial demand and policy tightening.
                   Trading volume remains robust with institutional participation growing.
                 </p>
               </div>
               <div className="border-l-4 border-blue-400 pl-4">
-                <h4 className="font-medium text-gray-900">California Cap-and-Trade</h4>
-                <p className="text-sm text-gray-600">
+                <h4 className="font-medium text-gray-900 dark:text-white">California Cap-and-Trade</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Slight decline due to seasonal factors. Long-term outlook remains positive
                   with new sectors expected to join the program.
                 </p>
@@ -147,24 +147,24 @@ const CarbonPrices = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Key Metrics</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Key Metrics</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Global Carbon Credit Volume</span>
-                <span className="font-semibold">450.2M tonnes</span>
+                <span className="text-gray-600 dark:text-gray-400">Global Carbon Credit Volume</span>
+                <span className="font-semibold dark:text-white">450.2M tonnes</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Average Price (USD)</span>
-                <span className="font-semibold">$52.30</span>
+                <span className="text-gray-600 dark:text-gray-400">Average Price (USD)</span>
+                <span className="font-semibold dark:text-white">$52.30</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">Market Cap</span>
-                <span className="font-semibold">$23.5B</span>
+                <span className="text-gray-600 dark:text-gray-400">Market Cap</span>
+                <span className="font-semibold dark:text-white">$23.5B</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">30-Day Volatility</span>
-                <span className="font-semibold">12.4%</span>
+                <span className="text-gray-600 dark:text-gray-400">30-Day Volatility</span>
+                <span className="font-semibold dark:text-white">12.4%</span>
               </div>
             </div>
           </div>

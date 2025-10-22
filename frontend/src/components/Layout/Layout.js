@@ -7,6 +7,7 @@ import {
   CubeIcon, 
   ArchiveBoxIcon 
 } from '@heroicons/react/24/outline';
+import DarkModeToggle from '../DarkModeToggle';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -26,9 +27,9 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Navigation Header */}
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -44,8 +45,8 @@ const Layout = ({ children }) => {
                       to={item.href}
                       className={`${
                         isActive(item.href)
-                          ? 'border-primary-500 text-gray-900'
-                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                          ? 'border-primary-500 text-gray-900 dark:text-white'
+                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                       } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                     >
                       <Icon className="h-4 w-4 mr-2" />
@@ -55,11 +56,14 @@ const Layout = ({ children }) => {
                 })}
               </div>
             </div>
+            <div className="flex items-center space-x-4">
+              <DarkModeToggle />
+            </div>
           </div>
         </div>
 
         {/* Mobile menu */}
-        <div className="sm:hidden">
+        <div className="sm:hidden dark:bg-gray-800">
           <div className="pt-2 pb-3 space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon;
@@ -69,8 +73,8 @@ const Layout = ({ children }) => {
                   to={item.href}
                   className={`${
                     isActive(item.href)
-                      ? 'bg-primary-50 border-primary-500 text-primary-700'
-                      : 'border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700'
+                      ? 'bg-primary-50 dark:bg-primary-900 border-primary-500 text-primary-700 dark:text-primary-100'
+                      : 'border-transparent text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                   } block pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
                 >
                   <div className="flex items-center">
@@ -85,7 +89,7 @@ const Layout = ({ children }) => {
       </nav>
 
       {/* Main Content */}
-      <main>{children}</main>
+      <main className="dark:bg-gray-900">{children}</main>
     </div>
   );
 };

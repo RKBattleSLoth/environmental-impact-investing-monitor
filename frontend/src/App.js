@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'react-hot-toast';
 
+import { ThemeProvider } from './contexts/ThemeContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Briefs from './pages/Briefs';
@@ -24,26 +25,28 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/briefs" element={<Briefs />} />
-            <Route path="/carbon-prices" element={<CarbonPrices />} />
-            <Route path="/metrics" element={<Metrics />} />
-            <Route path="/archive" element={<Archive />} />
-          </Routes>
-        </Layout>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            className: 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
-          }}
-        />
-      </Router>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/briefs" element={<Briefs />} />
+              <Route path="/carbon-prices" element={<CarbonPrices />} />
+              <Route path="/metrics" element={<Metrics />} />
+              <Route path="/archive" element={<Archive />} />
+            </Routes>
+          </Layout>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              className: 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
+            }}
+          />
+        </Router>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
